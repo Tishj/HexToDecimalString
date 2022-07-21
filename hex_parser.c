@@ -6,7 +6,7 @@
 /*   By: tbruinem <tbruinem@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2022/07/15 21:54:22 by tbruinem      #+#    #+#                 */
-/*   Updated: 2022/07/16 00:24:19 by tbruinem      ########   odam.nl         */
+/*   Updated: 2022/07/21 23:36:33 by tbruinem      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,28 +31,62 @@ typedef struct {
 	char* intermediate;
 } String;
 
+const int64_t POWERS_OF_TEN[] = {	1,
+									10,
+									100,
+									1000,
+									10000,
+									100000,
+									1000000,
+									10000000,
+									100000000,
+									1000000000,
+									10000000000,
+									100000000000,
+									1000000000000,
+									10000000000000,
+									100000000000000,
+									1000000000000000,
+									10000000000000000,
+									100000000000000000,
+									1000000000000000000};
+
 #define HEX_TABLE "0123456789ABCDEF"
 // #define HEX_STRING "AA18ABA43B50DEEF38598FAF87D2AB634E4571C130A9BCA7B878267414FAAB8B471BD8965F5C9FC3818485EAF529C26246F3055064A8DE19C8C338BE5496CBAEB059DC0B358143B44A35449EB264113121A455BD7FDE3FAC919E94B56FB9BB4F651CDB23EAD439D6CD523EB08191E75B35FD13A7419B3090F24787BD4F4E1967"
 #define HEX_STRING "CF2"
 
+size_t	translate_index(String* string, size_t index) {
+	assert(string->capacity);
+	assert(index <= (string->capacity - 1));
+	return (string->capacity - 1) - index;
+}
+
 void	print_string(String* string) {
 	size_t start_index = string->capacity - string->len;
-	write(STDOUT_FILENO, string->buffer + start_index, string->len);
-	write(STDOUT_FILENO, "\n", 1);
+	dprintf(2, "-------------\n");
+	dprintf(2, "BUFFER: %.*s\n", (int)string->capacity, string->buffer);
+	dprintf(2, "INTERMEDIATE: %.*s\n", (int)string->capacity, string->intermediate);
+	dprintf(2, "LEN: %ld\n", string->len);
+	dprintf(2, "CAPACITY: %ld\n", string->capacity);
+	dprintf(2, "-------------\n");
 }
 
 //! If the length increases to capacity, we have to reallocate both buffers
 void	increase_string(String* string) {
 	char* old_buffer = string->buffer;
+	char* old_intermediate = string->intermediate;
 	assert(string->capacity == string->len);
 	string->capacity *= 2;
 	string->buffer = malloc((sizeof(char) * string->capacity) + 1);
 
-	free(string->intermediate);
 	string->intermediate = malloc((sizeof(char) * string->capacity) + 1);
 	
 	memcpy(string->buffer + string->len, old_buffer, string->len);
+	memset(string->buffer, '0', string->len);
+	memset(string->intermediate, '0', string->capacity);
+	memcpy(string->intermediate + string->len, old_intermediate, string->len);
 	free(old_buffer);
+	free(old_intermediate);
 }
 
 //! Initialize the string with buffers of a given capacity
@@ -76,10 +110,25 @@ static char* get_string_buffer(String* string, BufferType buffer_type) {
 	}
 }
 
+static char* get_memory_location(String* string, size_t index, BufferType buffer_type) {
+	const size_t i = translate_index(string, index);
+	char* const buffer = get_string_buffer(string, buffer_type);
+	return buffer + i;
+}
+
+void	set_value(String* string, size_t index, BufferType buffer_type, char value) {
+	char* buffer = get_memory_location(string, index, buffer_type);
+	*buffer = value;
+}
+
+char	get_value(String* string, size_t index, BufferType buffer_type) {
+	char* buffer = get_memory_location(string, index, buffer_type);
+	return *buffer;
+}
+
 //! Apply an increase to a decimal digit
 //! This addition might result in an additional digit being needed to represent the number
 void	apply_increase(String* string, size_t offset, uint8_t increase, BufferType buffer_type) {
-	dprintf(2, "OFFSET: %ld | INCREASE: %u\n", offset, increase);
 	//! Increase the length
 	if (offset >= string->len) {
 		string->len++;
@@ -87,34 +136,24 @@ void	apply_increase(String* string, size_t offset, uint8_t increase, BufferType 
 			increase_string(string);
 		}
 	}
-	print_string(string);
-	sleep(1);
 
-	const size_t index = (string->capacity - offset) - 1;
-	dprintf(2, "index: %ld\n", index);
-
-	char* const buffer = get_string_buffer(string, buffer_type);
-
-	uint8_t current_digit_value = buffer[index] - '0';
+	uint8_t current_digit_value = get_value(string, offset, buffer_type) - '0';
 	uint8_t increased_value = current_digit_value + increase;
-	dprintf(2, "DIGIT: %c | OLD: %u | NEW: %u\n", buffer[index], current_digit_value, increased_value);
 	if (increased_value >= 10) {
-		apply_increase(string, offset+1, increased_value / 10, buffer_type);
+		apply_increase(string, offset + 1, increased_value / 10, buffer_type);
 	}
-	buffer[index] = (increased_value % 10) + '0';
+	set_value(string, offset, buffer_type, (increased_value % 10) + '0');
 }
 
 //! Create an intermediate value by multiplying the current decimal representation in 'buffer'
 void	set_intermediate(String* string) {
-	dprintf(2, "SET INTERMEDIATE\n");
 	//! Loop backwards over the current digits
 	//! Minor numbers first
 	memset(string->intermediate, '0', string->capacity);
 	const size_t original_len = string->len;
 	for (size_t i = 0; i < original_len; i++) {
-		const size_t index = (string->capacity - i) - 1;
 
-		const uint8_t decimal_value = string->buffer[index] - '0';
+		const uint8_t decimal_value = get_value(string, i, BUFFER_FINAL) - '0';
 		const uint8_t increased_value = decimal_value * 16;
 		apply_increase(string, i, increased_value, BUFFER_INTERMEDIATE);
 	}
@@ -129,9 +168,9 @@ void	apply_multiplication(String* string) {
 //! So we need to move this up to the start and null-terminate it
 char* finalize(String* string) {
 	free(string->intermediate);
-	size_t final_length = (string->capacity - string->len);
-	memmove(string->buffer, string->buffer + final_length, string->len);
-	string->buffer[final_length] = '\0';
+	size_t start_idx = string->capacity - string->len;
+	memmove(string->buffer, string->buffer + start_idx, string->len);
+	string->buffer[string->len] = '\0';
 	return string->buffer;
 }
 
@@ -151,10 +190,8 @@ char*	hex_to_dec(char* hex_string) {
 			//Apply the multiplication
 			apply_multiplication(&result);
 		}
-		print_string(&result);
 		//Apply the addition of the new digit
 		apply_increase(&result, 0, decimal, BUFFER_FINAL);
-		print_string(&result);
 	}
 	return finalize(&result);
 }

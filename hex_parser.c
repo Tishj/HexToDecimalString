@@ -6,7 +6,7 @@
 /*   By: tbruinem <tbruinem@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2022/07/15 21:54:22 by tbruinem      #+#    #+#                 */
-/*   Updated: 2022/07/21 23:36:33 by tbruinem      ########   odam.nl         */
+/*   Updated: 2022/07/21 23:37:51 by tbruinem      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,29 +31,9 @@ typedef struct {
 	char* intermediate;
 } String;
 
-const int64_t POWERS_OF_TEN[] = {	1,
-									10,
-									100,
-									1000,
-									10000,
-									100000,
-									1000000,
-									10000000,
-									100000000,
-									1000000000,
-									10000000000,
-									100000000000,
-									1000000000000,
-									10000000000000,
-									100000000000000,
-									1000000000000000,
-									10000000000000000,
-									100000000000000000,
-									1000000000000000000};
-
 #define HEX_TABLE "0123456789ABCDEF"
-// #define HEX_STRING "AA18ABA43B50DEEF38598FAF87D2AB634E4571C130A9BCA7B878267414FAAB8B471BD8965F5C9FC3818485EAF529C26246F3055064A8DE19C8C338BE5496CBAEB059DC0B358143B44A35449EB264113121A455BD7FDE3FAC919E94B56FB9BB4F651CDB23EAD439D6CD523EB08191E75B35FD13A7419B3090F24787BD4F4E1967"
-#define HEX_STRING "CF2"
+#define HEX_STRING "AA18ABA43B50DEEF38598FAF87D2AB634E4571C130A9BCA7B878267414FAAB8B471BD8965F5C9FC3818485EAF529C26246F3055064A8DE19C8C338BE5496CBAEB059DC0B358143B44A35449EB264113121A455BD7FDE3FAC919E94B56FB9BB4F651CDB23EAD439D6CD523EB08191E75B35FD13A7419B3090F24787BD4F4E1967"
+// #define HEX_STRING "CF2"
 
 size_t	translate_index(String* string, size_t index) {
 	assert(string->capacity);
